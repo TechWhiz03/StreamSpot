@@ -39,8 +39,6 @@ const videoSchema = new Schema(
   { timestamps: true }
 );
 
-// enabling pagination capabilities for any aggregation queries performed on the "Video" collection
-
-videoSchema.plugin(mongooseAggregatePaginate);
+videoSchema.plugin(mongooseAggregatePaginate); // enabling pagination capabilities for any aggregation queries performed on the "Video" collection
 
 export const Video = mongoose.model("Video", videoSchema);

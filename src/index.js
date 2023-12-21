@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import connectDB from "./db/dbConnect.js";
 
-dotenv.config({ path: "./env" });
+dotenv.config({ path: "./env" }); // makes sure env variables are initialized as soon as app is loaded
 
 connectDB()
   .then(() => {

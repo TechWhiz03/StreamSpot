@@ -23,6 +23,7 @@ const userSchema = new Schema(
       type: String,
       required: true,
       trim: true,
+      index: true,
     },
     avatar: {
       type: String, // cloudinary url
@@ -51,7 +52,6 @@ const userSchema = new Schema(
 // pre hooks are middleware functions defined to execute before a particular operation (such as save, validate, remove, etc.)
 // is performed on a document within a Mongoose schema.For instance, before saving a document to hash a password.
 // avoid using arrow function as callback as 'this' keyword is used.
-
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
@@ -59,22 +59,18 @@ userSchema.pre("save", async function (next) {
 
   // next() allows the middleware to proceed to the next function in the middleware chain or
   // to move on to the next step in the Mongoose operation(such as saving the document).
-
   next();
 });
 
 // creates custom method for our schema that checks if a provided password matches the stored hashed password.
-
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
 // custom methods for Access & Refresh Token generation
 // no async since very fast access
-
 userSchema.methods.generateAccessToken = function () {
   // sign() method generates JWT
-
   return jwt.sign(
     {
       _id: this._id,
