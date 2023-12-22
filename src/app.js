@@ -25,8 +25,14 @@ app.use(
     limit: "16kb",
   })
 );
-app.use(express.static("public")); // serves static files(HTML, CSS, imgs, videos, etc) located in 'public' folder
 
+app.use(express.static("public")); // serves static files(HTML, CSS, imgs, videos, etc) located in 'public' folder.
 app.use(cookieParser()); // parses cookies from incoming req
+
+// routes import
+import userRouter from "./routes/user.routes.js";
+
+// routes declaration
+app.use("/api/v1/users", userRouter);
 
 export { app };
