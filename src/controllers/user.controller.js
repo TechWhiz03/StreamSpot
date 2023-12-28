@@ -132,7 +132,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // find user thro username or email
   const user = await User.findOne({
-    $or: [{ username, email }],
+    $or: [{ username }, { email }],
   });
   if (!user) {
     throw new ApiError(404, "User does not exist");
@@ -185,7 +185,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     req.user._id,
     {
       $set: {
-        refreshToken: undefined,
+        refreshToken: "", // or refreshToken: null
       },
     },
     {
