@@ -383,6 +383,96 @@ const updateCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover Image updated successfully"));
 });
 
+// Get Channel Profile
+const getChannelProfile = asyncHandler(async (req, res) => {
+  // extract username of channel's owner from url
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(400, "Username not found");
+  }
+
+  // Perform Aggregation Pipelines/Operations
+  const channel = await User.aggregate([
+    {
+      // filters doc based on the matching criteria (here username)
+      $match: {
+        username: username?.toLowerCase(), // or only username
+      },
+    },
+    {
+      //lookup performs Left Join between docs of two collections (here subscriptions and users)
+
+      // this lookup finds no of "subscribers" of a particular channel since, foreignField: "channel"
+      $lookup: {
+        from: "subscriptions", // specify foriegn collection you want to join with "users"(current) collection
+        localField: "_id", // specify field from current collection to match with foriegn collection's field
+        foreignField: "channel", // specify field from foriegn collection to match with localField
+        as: "subscribers", // specify name of the output "array" field
+      },
+    },
+    {
+      // this lookup finds no of "channels subscribed to" since, foreignField: "subscriber"
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      // adds additional fields (here subcribersCount, channelsSubscribedToCount & isSubscribed) into user document
+      $addFields: {
+        // field name
+        subcribersCount: {
+          // $size: returns the size of an array, i.e number of elements in an array field(array field here is subscribers) within a document(doc here is users)
+          // since subscribers is a field hence the "$" sign
+          $size: "$subscribers",
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo",
+        },
+        isSubscribed: {
+          // $cond: implements conditional logic, similar to an "if-else" statement.
+          $cond: {
+            if: {
+              $in: [req.user?._id, "$subscribers.subscriber"], // checks if a specified value exists in an object/array (here subscribers object).
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      // Controls which fields are present & how they appear in the final result.
+      // Reshapes documents by including, excluding, or adding fields, projecting the data in a different structure.
+      $project: {
+        subcribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        fullName: 1,
+        username: 1,
+        email: 1,
+        avatar: 1,
+        coverImage: 1,
+      },
+    },
+  ]);
+
+  if (!channel?.length) {
+    throw new ApiError(404, "Channel not found");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      channel[0], // sending only the 1st element (viz an object) of the array channel
+      "Channel fetched successfully"
+    )
+  );
+});
+
 export {
   registerUser,
   loginUser,
@@ -393,4 +483,5 @@ export {
   updateAccountDetails,
   updateAvatar,
   updateCoverImage,
+  getChannelProfile,
 };
