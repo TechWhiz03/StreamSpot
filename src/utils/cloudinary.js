@@ -29,4 +29,26 @@ const uploadOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadOnCloudinary };
+// to remove previous file from cloudinary server
+const deleteOnCloudinary = async (publicId) => {
+  if (!publicId) return null;
+
+  try {
+    // Use Cloudinary API to delete the file by publicId
+    const result = await cloudinary.uploader.destroy(publicId);
+
+    // Check the result to ensure successful deletion
+    if (!result.result === "ok") {
+      console.log(
+        `Error deleting file with public_id ${publicId} from Cloudinary.`
+      );
+    }
+  } catch (error) {
+    console.log(
+      `Error deleting file with public_id ${publicId} from Cloudinary:`,
+      error.message
+    );
+  }
+};
+
+export { uploadOnCloudinary, deleteOnCloudinary };
