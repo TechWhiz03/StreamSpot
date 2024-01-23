@@ -194,13 +194,14 @@ const updateVideo = asyncHandler(async (req, res) => {
     };
   }
 
-  const updateVideoDetails = await Video.findByIdAndUpdate(
-    videoId,
-    updateFields,
-    {
+  let updateVideoDetails;
+  if (req.user._id.toString() === video.owner.toString()) {
+    updateVideoDetails = await Video.findByIdAndUpdate(videoId, updateFields, {
       new: true,
-    }
-  );
+    });
+  } else {
+    throw new ApiError(400, "Allowed to update only your video ");
+  }
 
   if (!updateVideoDetails) {
     throw new ApiError(
