@@ -145,8 +145,80 @@ const getVideoById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, video, "Video fetched successfully!!"));
 });
 
-//Update Video
-const updateVideo = asyncHandler(async (req, res) => {});
+//Update Video Details
+const updateVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+  const thumbnailLocalPath = req.file?.path;
+
+  if (!isValidObjectId(videoId)) {
+    throw new ApiError(400, "This video id is not valid");
+  }
+
+  if (!(title && description)) {
+    throw new ApiError(400, "Title & Description fields are required");
+  }
+
+  let updateFields = {
+    $set: {
+      title,
+      description,
+    },
+  };
+
+  // to update thumbnail
+  const video = await Video.findById(videoId);
+
+  // if thumbnail provided delete the previous one and upload new
+  let thumbnail;
+  if (thumbnailLocalPath) {
+    await deleteOnCloudinary(video.thumbnail?.public_id);
+
+    // upload new one
+    thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+
+    if (!thumbnail) {
+      throw new ApiError(
+        500,
+        "Something went wrong while updating thumbnail on cloudinary !!"
+      );
+    }
+
+    // thumbnail fields are merged to the existing $set object using the spread operator (...)
+    updateFields.$set = {
+      ...updateFields.$set,
+      thumbnail: {
+        publicId: thumbnail.public_id,
+        url: thumbnail.url,
+      },
+    };
+  }
+
+  const updateVideoDetails = await Video.findByIdAndUpdate(
+    videoId,
+    updateFields,
+    {
+      new: true,
+    }
+  );
+
+  if (!updateVideoDetails) {
+    throw new ApiError(
+      500,
+      "Something went wrong while updating video details"
+    );
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        updateVideoDetails,
+        "Video details updated successfully!"
+      )
+    );
+});
 
 //Delete Video
 const deleteVideo = asyncHandler(async (req, res) => {});
