@@ -3,6 +3,7 @@ import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
 import { Like } from "../models/like.model.js";
 import { Comment } from "../models/comment.model.js";
+import { Playlist } from "../models/playlist.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -319,6 +320,18 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
       // delete the instances of video from comment collections
       Comment.deleteMany({ video: _id }),
+
+      // delete all the video instances from videos array in playlist collections
+      Playlist.updateMany(
+        {
+          videos: _id,
+        },
+        {
+          $pull: {
+            videos: _id,
+          },
+        }
+      ),
 
       // delete video and thumbnail in cloudinary
       deleteOnCloudinary(videoFile.publicId),
