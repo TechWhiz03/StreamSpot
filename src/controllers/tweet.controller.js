@@ -1,6 +1,7 @@
 import { isValidObjectId } from "mongoose";
 import { Tweet } from "../models/tweet.model.js";
 import { User } from "../models/user.model.js";
+import { Like } from "../models/like.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -123,6 +124,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
   }
 
   const deleteTweet = await Tweet.findByIdAndDelete(tweetId);
+  if (deleteTweet) {
+    // delete tweet instance from like collection
+    await Like.deleteMany({ tweet: tweetId });
+  }
 
   // console.log("Delete successfully", deleteTweet)
 
