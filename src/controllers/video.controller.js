@@ -1,6 +1,8 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
+import { Like } from "../models/like.model.js";
+import { Comment } from "../models/comment.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -183,7 +185,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log("video:", video);
+  // console.log("video:", video);
 
   if (video.length > 0) {
     video = video[0];
@@ -195,7 +197,7 @@ const getVideoById = asyncHandler(async (req, res) => {
     },
   });
 
-  if (!video) {
+  if (!video || video.length === 0) {
     throw new ApiError(404, "Video not found");
   }
 
@@ -296,24 +298,39 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not allowed to delete this video!");
   }
 
-  // delete video and thumbnail in cloudinary
-  if (video.videoFile) {
-    await deleteOnCloudinary(video.videoFile.publicId);
-  }
+  const { _id, videoFile, thumbnail } = video;
 
-  if (video.thumbnail) {
-    await deleteOnCloudinary(video.thumbnail.publicId);
-  }
+  // find comments associated with videoId
+  const comments = await Comment.find({ video: _id });
 
-  const deleteResponce = await Video.findByIdAndDelete(videoId);
+  // extracts an array of comment ids from the fetched comments.
+  const commentIds = comments.map((comment) => comment._id);
 
-  if (!deleteResponce) {
-    throw new ApiError(500, "Something went wrong while deleting video !!");
+  const delResponse = await Video.findByIdAndDelete(_id);
+  if (delResponse) {
+    // Promise.all() handle multiple asynchronous operations concurrently and
+    // ensures that either all deletion operations succeed or none of them do.
+    await Promise.all([
+      // delete the instances of video from like collections
+      Like.deleteMany({ video: _id }),
+
+      // deletes all comment likes where the comment field matches any of the comment ids in the commentIds array
+      Like.deleteMany({ comment: { $in: commentIds } }),
+
+      // delete the instances of video from comment collections
+      Comment.deleteMany({ video: _id }),
+
+      // delete video and thumbnail in cloudinary
+      deleteOnCloudinary(videoFile.publicId),
+      deleteOnCloudinary(thumbnail.publicId),
+    ]);
+  } else {
+    throw new ApiError(500, "Something went wrong while deleting video");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, deleteResponce, "Video deleted successfully!!"));
+    .json(new ApiResponse(200, {}, "Video deleted successfully!!"));
 });
 
 //Toggle Publish Status
